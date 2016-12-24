@@ -20,15 +20,15 @@ class LIGHTWEIGHTGRIDLIBRARY_API ILightWeightGridInterface
 {
 	GENERATED_IINTERFACE_BODY()
 public:
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		int32 GetNumberOfElements() const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		FVector GetIndexLocation(int32 gridIndex) const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		int32 GetLocationIndex(const FVector& location) const;
 
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		TArray<int32> GetIndexNeighbors(int32 gridIndex) const;
 };
