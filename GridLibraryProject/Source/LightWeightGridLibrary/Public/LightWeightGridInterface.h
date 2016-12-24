@@ -31,16 +31,4 @@ public:
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
 		TArray<int32> GetIndexNeighbors(int32 gridIndex) const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
-		void SetGridTransform(const FTransform& newTransform);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
-		void SetGridLocation(const FVector& newLocation);
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
-		FTransform GetGridTransform() const;
-
-	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Gridding")
-		FVector GetGridLocation() const;
 };
