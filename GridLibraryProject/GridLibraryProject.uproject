@@ -2,5 +2,17 @@
 	"FileVersion": 3,
 	"EngineAssociation": "4.12",
 	"Category": "",
-	"Description": ""
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "GridLibraryProject",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "LightWeightGridLibrary",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
 }
