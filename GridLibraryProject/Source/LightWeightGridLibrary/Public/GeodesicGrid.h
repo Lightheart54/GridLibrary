@@ -6,7 +6,13 @@
 #include "LightWeightGridInterface.h"
 #include "GeodesicGrid.generated.h"
 
-
+/*
+ * A Geodesic Grid of a Sphere with a specified radius and frequency
+ * The grid is based upon the Self-Organizing Map as presented in:
+ * Wu, Yingxin and Masahio Takatsuka. "Spherical self-organizing map using efficient indexed geodesic data structure"
+ *    Elsevier, Neural Networks 19, 2006, 900-910
+ * See Documentation for more information concerning the grid structure
+ */
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class LIGHTWEIGHTGRIDLIBRARY_API UGeodesicGrid : public USceneComponent, public ILightWeightGridInterface
 {
@@ -15,13 +21,7 @@ class LIGHTWEIGHTGRIDLIBRARY_API UGeodesicGrid : public USceneComponent, public 
 public:	
 	// Sets default values for this component's properties
 	UGeodesicGrid();
-
-	// Called when the game starts
-	virtual void BeginPlay() override;
-	
-	// Called every frame
-	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
-
+		
 	// See ILightWeightGridInterface::GetNumbeOfElements
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		int32 GetNumberOfElements() const;
@@ -47,17 +47,31 @@ public:
 		int32 GetGridFrequency() const;
 
 	/* Sets the Grid Frequency.
-	 * This rebuilds the grid, so any prior references to it are now invalid
+	 * This rebuilds the grid. Existing grid vertex numbers are invalidated.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
 		void SetGridFrequency(int32 newFrequency);
+
+	/*
+	 * Subdivides the Grid.
+	 * Existing grid vertex numbers are invalidated.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
+	void IncrementFrequency();
+
+	/*
+	* Removes a subdivision from the Grid. This function does nothing if 
+	* the frequency is odd or 0. Existing grid vertex numbers are preserved.
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
+	void DecrementFrequency();
 
 	/* Gets the Grid Radius*/
 	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
 		float GetGridRadius() const;
 
 	/* Sets the Grid Radius.
-	* This rebuilds the grid, so any prior references to it are now invalid
+	* This changes the grid locations. Previously Retrieve Grid Locations are invalidated.
 	*/
 	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
 		void SetGridRadius(float newRadius);
@@ -68,14 +82,25 @@ public:
 
 protected:
 	/* The Number of Vertexes Between the Base Icosahedron Vertexes */
-	UPROPERTY(EditAnywhere, Category = "Grid Properties", meta = (ClampMin = 0, UIMin = 0))
+	UPROPERTY(EditAnywhere, Category = "Grid Properties", meta = (ClampMin = 1, UIMin = 1))
 		int32 GridFrequency;
 
 	/* The Radius of the Grid's Circumscribing Sphere*/
-	UPROPERTY(EditAnywhere, Category = "Grid Properties", meta = (ClampMin = 0.0, UIMin = 0.0))
+	UPROPERTY(EditAnywhere, Category = "Grid Properties", meta = (ClampMin = 0.1, UIMin = 0.1))
 		float GridRadius;
+
+	/* The number of Vertexes in the grid */
+	UPROPERTY(VisibleAnywhere, Category = "Grid Properties")
+		int32 NumberOfVertexes;
 
 private:
 	/* Constructs a Geodesic Grid With the Specified Frequency */
 	void buildGrid();
+	void buildIcosahedronRefernceLocations();
+
+	TArray<TArray<int32>> RectilinearGrid;
+	TArray<FVector> referenceLocations;
+	
+	void populateRefernceColumn(int32 GridColumn, int32& currentIndexNumber);
+	void populateGridColumn(int32 GridColumn, int32& currentIndexNumber);
 };
