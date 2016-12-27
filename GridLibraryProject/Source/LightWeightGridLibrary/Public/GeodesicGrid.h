@@ -100,7 +100,10 @@ private:
 
 	TArray<TArray<int32>> RectilinearGrid;
 	TArray<FVector> referenceLocations;
+	TArray<TArray<int32>> UVLocationList;
 	
 	void populateRefernceColumn(int32 GridColumn, int32& currentIndexNumber);
 	void populateGridColumn(int32 GridColumn, int32& currentIndexNumber);
+	void AssignNewIndexNumber(int32 GridColumn, int32 RowNumber, int32 currentIndexNumber);
+
 };

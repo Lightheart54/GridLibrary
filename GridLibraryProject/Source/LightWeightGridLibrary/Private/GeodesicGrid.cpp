@@ -33,6 +33,7 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 
 TArray<int32> UGeodesicGrid::GetIndexNeighbors_Implementation(int32 gridIndex) const
 {
+
 	return TArray<int32>();
 }
 
@@ -65,7 +66,7 @@ float UGeodesicGrid::GetGridRadius() const
 void UGeodesicGrid::SetGridRadius(float newRadius)
 {
 	GridRadius = newRadius;
-	buildGrid();
+	buildIcosahedronRefernceLocations();
 }
 
 void UGeodesicGrid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -90,6 +91,9 @@ void UGeodesicGrid::buildGrid()
 	// update the number of Vertexes
 	NumberOfVertexes = 10 * GridFrequency * GridFrequency + 2;
 	buildIcosahedronRefernceLocations();
+	//Prep The UV Location List for population
+	UVLocationList.Empty(NumberOfVertexes);
+	UVLocationList.SetNumZeroed(NumberOfVertexes);
 
 	//Prep To Rebuild the Grid
 	RectilinearGrid.Empty(5 * GridFrequency);
@@ -113,7 +117,6 @@ void UGeodesicGrid::buildGrid()
 		{
 			continue; 
 		}
-
 		populateGridColumn(GridColumn, currentIndexNumber);		
 	}
 }
@@ -207,21 +210,21 @@ void UGeodesicGrid::populateRefernceColumn(int32 GridColumn, int32& currentIndex
 	RectilinearGrid[GridColumn].SetNumZeroed(3 * GridFrequency + 1);
 
 	//Set the top and bottom Index Numbers
-	RectilinearGrid[GridColumn][0] = 10;
-	RectilinearGrid[GridColumn][3* GridFrequency] = 11;
+	AssignNewIndexNumber(GridColumn, 0, 10);
+	AssignNewIndexNumber(GridColumn, 3 * GridFrequency, 11);
 
 	//Set the interior index reference numbers
 	for (int32 RowNumber = 1; RowNumber < RectilinearGrid[GridColumn].Num()-1; ++ RowNumber )
 	{
 		if (RowNumber % GridFrequency == 0)
-		{			
-			RectilinearGrid[GridColumn][RowNumber] = 
-				(RowNumber/GridFrequency)-1		//	-1 because we're starting at zero
-				+ (GridColumn/GridFrequency)*2;	//	*2 there are two addition reference points per column
+		{		
+			AssignNewIndexNumber(GridColumn, RowNumber,
+				(RowNumber / GridFrequency) - 1		//	-1 because we're starting at zero
+				+ (GridColumn / GridFrequency) * 2);	//	*2 there are two addition reference points per column
 		}
 		else
 		{
-			RectilinearGrid[GridColumn][RowNumber] = currentIndexNumber;
+			AssignNewIndexNumber(GridColumn, RowNumber, currentIndexNumber);
 			++currentIndexNumber;
 		}
 	}
@@ -235,20 +238,27 @@ void UGeodesicGrid::populateGridColumn(int32 GridColumn, int32& currentIndexNumb
 	//Set the top and bottom Index Numbers / Referencing the equivalent column locations
 	int32 BottomReferenceColumn = (GridColumn/GridFrequency) * GridFrequency;
 	int32 BottomReferenceRow = GridFrequency - (GridColumn % GridFrequency);
-	RectilinearGrid[GridColumn][0] = RectilinearGrid[BottomReferenceColumn][BottomReferenceRow];
+	AssignNewIndexNumber(GridColumn, 0, RectilinearGrid[BottomReferenceColumn][BottomReferenceRow]);
 
 	int32 TopReferenceColumn = (GridColumn / GridFrequency)*GridFrequency + GridFrequency;
 	if (TopReferenceColumn > 4* GridFrequency)
 	{
 		TopReferenceColumn = 0; //Wrap Around
 	}
-	int32 TopReferenceRow = 2*GridFrequency + (GridFrequency - (GridColumn%GridFrequency));
-	RectilinearGrid[GridColumn][2 * GridFrequency] = RectilinearGrid[TopReferenceColumn][TopReferenceRow];
+	int32 TopReferenceRow = 2 * GridFrequency + (GridFrequency - (GridColumn%GridFrequency));
+	AssignNewIndexNumber(GridColumn, 2 * GridFrequency, RectilinearGrid[TopReferenceColumn][TopReferenceRow]);
 
 	for (int32 RowNumber = 1; RowNumber < RectilinearGrid[GridColumn].Num() -1 ; ++RowNumber)
 	{
-		RectilinearGrid[GridColumn][RowNumber] = currentIndexNumber;
+		AssignNewIndexNumber(GridColumn, RowNumber, currentIndexNumber);
 		++currentIndexNumber;
 	}
+}
+
+void UGeodesicGrid::AssignNewIndexNumber(int32 GridColumn, int32 RowNumber, int32 currentIndexNumber)
+{
+	RectilinearGrid[GridColumn][RowNumber] = currentIndexNumber;
+	UVLocationList[currentIndexNumber].Add(GridColumn);
+	UVLocationList[currentIndexNumber].Add(RowNumber);
 }
 
