@@ -100,6 +100,7 @@ private:
 
 	TArray<TArray<int32>> RectilinearGrid;
 	TArray<FVector> referenceLocations;
+	TArray<TArray<int32>> UVLocationList; //Each List is 2*n long, where n is the number of occurances of an index
 	
 	void populateRefernceColumn(const int32& GridColumn, int32& currentIndexNumber);
 	void populateGridColumn(const int32& GridColumn, int32& currentIndexNumber);
