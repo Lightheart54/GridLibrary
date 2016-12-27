@@ -11,7 +11,7 @@ UGeodesicGrid::UGeodesicGrid() : Super()
 	// off to improve performance if you don't need them.
 	bWantsBeginPlay = false;
 	PrimaryComponentTick.bCanEverTick = false;
-	GridFrequency = 0;
+	GridFrequency = 1;
 	GridRadius = 100.0f;
 	buildGrid();
 }
@@ -93,6 +93,7 @@ void UGeodesicGrid::buildGrid()
 
 	//Prep To Rebuild the Grid
 	RectilinearGrid.Empty(5 * GridFrequency);
+	RectilinearGrid.SetNum(5 * GridFrequency);
 
 	int32 currentIndexNumber = 12; // numbers 0 through 11 are resevered for the key indexes;
 	
