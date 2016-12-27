@@ -100,10 +100,17 @@ private:
 
 	TArray<TArray<int32>> RectilinearGrid;
 	TArray<FVector> referenceLocations;
-	TArray<TArray<int32>> UVLocationList;
 	
-	void populateRefernceColumn(int32 GridColumn, int32& currentIndexNumber);
-	void populateGridColumn(int32 GridColumn, int32& currentIndexNumber);
-	void AssignNewIndexNumber(int32 GridColumn, int32 RowNumber, int32 currentIndexNumber);
+	void populateRefernceColumn(const int32& GridColumn, int32& currentIndexNumber);
+	void populateGridColumn(const int32& GridColumn, int32& currentIndexNumber);
+	void AssignNewIndexNumber(const int32& GridColumn, const int32& RowNumber,
+		const int32& currentIndexNumber);
 
+	TArray<int32> getLocationNeighbors(int32 uIndex, int32 vIndex) const;
+
+	void addIndexToNeighborList(int32 vIndex, int32 currentIndex,
+		int32 uIndex, TArray<int32> &neighborList) const;
+
+	void decrementU(int32& uIndex, int32& vIndex) const;
+	void incrementU(int32& uIndex, int32& vIndex) const;
 };

@@ -33,8 +33,17 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 
 TArray<int32> UGeodesicGrid::GetIndexNeighbors_Implementation(int32 gridIndex) const
 {
-
-	return TArray<int32>();
+	TArray<int32> neighborList;
+	for (int32 UVIndex = 0; UVIndex < UVLocationList[gridIndex].Num(); UVIndex += 2)
+	{
+		TArray<int32> locationNeighbors = getLocationNeighbors(UVLocationList[gridIndex][UVIndex],
+			UVLocationList[gridIndex][UVIndex + 1]);
+		for (int32 neighborIndex : locationNeighbors)
+		{
+			neighborList.AddUnique(neighborIndex);
+		}
+	}
+	return neighborList;
 }
 
 int32 UGeodesicGrid::GetGridFrequency() const
@@ -204,7 +213,7 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	referenceLocations[9][2] = z;
 }
 
-void UGeodesicGrid::populateRefernceColumn(int32 GridColumn, int32& currentIndexNumber)
+void UGeodesicGrid::populateRefernceColumn(const int32& GridColumn, int32& currentIndexNumber)
 {
 	RectilinearGrid[GridColumn].Empty(3 * GridFrequency + 1);
 	RectilinearGrid[GridColumn].SetNumZeroed(3 * GridFrequency + 1);
@@ -230,7 +239,7 @@ void UGeodesicGrid::populateRefernceColumn(int32 GridColumn, int32& currentIndex
 	}
 }
 
-void UGeodesicGrid::populateGridColumn(int32 GridColumn, int32& currentIndexNumber)
+void UGeodesicGrid::populateGridColumn(const int32& GridColumn, int32& currentIndexNumber)
 {
 	RectilinearGrid[GridColumn].Empty(2 * GridFrequency + 1);
 	RectilinearGrid[GridColumn].SetNumZeroed(2 * GridFrequency + 1);
@@ -255,10 +264,68 @@ void UGeodesicGrid::populateGridColumn(int32 GridColumn, int32& currentIndexNumb
 	}
 }
 
-void UGeodesicGrid::AssignNewIndexNumber(int32 GridColumn, int32 RowNumber, int32 currentIndexNumber)
+void UGeodesicGrid::AssignNewIndexNumber(const int32& GridColumn, const int32& RowNumber, const int32& currentIndexNumber)
 {
 	RectilinearGrid[GridColumn][RowNumber] = currentIndexNumber;
 	UVLocationList[currentIndexNumber].Add(GridColumn);
 	UVLocationList[currentIndexNumber].Add(RowNumber);
+}
+
+TArray<int32> UGeodesicGrid::getLocationNeighbors(int32 uIndex, int32 vIndex) const
+{
+	TArray<int32> neighborList;
+	int32 currentIndex = RectilinearGrid[uIndex][vIndex];
+	incrementU(uIndex, vIndex); 
+	addIndexToNeighborList(vIndex, currentIndex, uIndex, neighborList); //U+1, V
+	++vIndex; 
+	addIndexToNeighborList(vIndex, currentIndex, uIndex, neighborList); //U+1, V+1
+	decrementU(uIndex, vIndex); 
+	addIndexToNeighborList(vIndex, currentIndex, uIndex, neighborList); //U, V+1
+	decrementU(uIndex, vIndex);
+	--vIndex;
+	addIndexToNeighborList(vIndex, currentIndex, uIndex, neighborList); //U-1, V
+	--vIndex;
+	addIndexToNeighborList(vIndex, currentIndex, uIndex, neighborList); //U-1, V-1
+	incrementU(uIndex, vIndex);
+	addIndexToNeighborList(vIndex, currentIndex, uIndex, neighborList); //U, V-1
+
+	return neighborList;
+}
+
+void UGeodesicGrid::addIndexToNeighborList(int32 vIndex, int32 currentIndex, int32 uIndex, TArray<int32> &neighborList) const
+{
+	if (vIndex >= 0 && vIndex < RectilinearGrid[uIndex].Num())
+	{
+		if (currentIndex != RectilinearGrid[uIndex][vIndex])
+		{
+			neighborList.Add(RectilinearGrid[uIndex][vIndex]);
+		}
+	}
+}
+
+void UGeodesicGrid::decrementU(int32& uIndex, int32& vIndex) const
+{
+	--uIndex;
+	if (uIndex%GridFrequency == 0)
+	{
+		vIndex += GridFrequency;
+	}
+	if (uIndex < 0)
+	{
+		uIndex += GridFrequency * 5;
+	}
+}
+
+void UGeodesicGrid::incrementU(int32& uIndex, int32& vIndex) const
+{
+	++uIndex;
+	if (uIndex%GridFrequency == 1)
+	{
+		vIndex -= GridFrequency;
+	}
+	if (uIndex == GridFrequency * 5)
+	{
+		uIndex = 0;
+	}
 }
 
