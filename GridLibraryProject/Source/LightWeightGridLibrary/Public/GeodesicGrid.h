@@ -32,6 +32,8 @@ public:
 		FVector GetIndexLocation(int32 gridIndex) const;
 		FVector GetIndexLocation_Implementation(int32 gridIndex) const override;
 
+		
+
 	// See ILightWeightGridInterface::GetLocationIndex
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		int32 GetLocationIndex(const FVector& location) const;
@@ -107,8 +109,13 @@ private:
 	void AssignNewIndexNumber(const int32& GridColumn, const int32& RowNumber,
 		const int32& currentIndexNumber);
 
-	TArray<int32> getLocationNeighbors(int32 uIndex, int32 vIndex) const;
+	void DetermineReferenceIndexes(int32 uIndex, int32 vIndex,
+		int32& ref11, int32& ref12, int32& ref21, int32& ref22) const;
+	FVector determineTriangleLocation(int32 localU, int32 localV,
+		int32 Uref1, int32 Uref2, int32 Vref1, int32 Vref2) const;
 
+
+	TArray<int32> getLocationNeighbors(int32 uIndex, int32 vIndex) const;
 	void addIndexToNeighborList(int32 vIndex, int32 currentIndex,
 		int32 uIndex, TArray<int32> &neighborList) const;
 
