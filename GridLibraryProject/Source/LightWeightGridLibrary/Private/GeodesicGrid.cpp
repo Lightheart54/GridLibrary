@@ -212,7 +212,7 @@ void UGeodesicGrid::buildGrid()
 	for (int32 GridColumn = 0; GridColumn < 5; ++GridColumn)
 	{
 		//We're in one of the reference columns we've already taken care of it
-		if (GridColumn % 5 == 0) 
+		if (GridColumn % GridFrequency == 0) 
 		{
 			continue; 
 		}
