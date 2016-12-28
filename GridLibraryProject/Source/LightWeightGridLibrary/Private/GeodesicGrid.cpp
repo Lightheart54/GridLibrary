@@ -179,10 +179,7 @@ void UGeodesicGrid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 	{
 		buildIcosahedronRefernceLocations();
 	}
-	else
-	{
-		Super::PostEditChangeProperty(PropertyChangedEvent);
-	}
+	Super::PostEditChangeProperty(PropertyChangedEvent);
 }
 
 void UGeodesicGrid::buildGrid()
@@ -386,7 +383,9 @@ void UGeodesicGrid::DetermineReferenceIndexes(int32 uIndex, int32 vIndex, int32&
 
 	//Now Find the Row Indexes
 	int32 vRef21 = (vIndex / GridFrequency) * GridFrequency;
-	if (vRef21 == vIndex && vRef21 != 0) // We're at the "Top of a Triangle"
+	if (vRef21 == vIndex // We're at the "Top of a Triangle"
+		&& (vRef21 != 0 //If we're not in the very bottom row
+		&& (vRef21 != GridFrequency && uRef1 == uIndex))) //And especially not the bottom leftmost index in a section
 	{
 		//Reference the Bottom of the Triangle
 		vRef21 -= GridFrequency;
@@ -395,10 +394,10 @@ void UGeodesicGrid::DetermineReferenceIndexes(int32 uIndex, int32 vIndex, int32&
 	//We're in the first column of a Triangle
 	if (uRef1 == uIndex)
 	{
-		//So the Second column index is 3 below where we're at
+		//So the Second column index is a grid frequency below where we're at
 		vRef21 -= GridFrequency;
 	}
-	//The first column reference is 3 above we're we're at
+	//The first column reference is a grid frequency above we're we're at
 	int32 vRef11 = vRef21 + GridFrequency;
 
 	//if we've done the above logic correctly such that vRef*1 is the lower corner,
