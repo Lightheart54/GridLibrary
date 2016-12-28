@@ -25,95 +25,20 @@ FVector UGeodesicGrid::GetIndexLocation_Implementation(int32 gridIndex) const
 {
 	int32 uIndex = UVLocationList[gridIndex][0];
 	int32 vIndex = UVLocationList[gridIndex][1];
-
-	//we need to make sure we're mapping to an actual triangle in on the grid
-	//Example f = 3
-	/*                                                          [9]
-	 *                                                          [8]
-	 *                                                          [7]
-	 *                                                 [9][6][6][6]
-	 *                                                 [8][5][5][5]
-	 *                                                 [7][4][4][4]
-	 *                                        [9][6][6][6][3][3][3]
-	 *                                        [8][5][5][5][2][2][2]
-	 *                                        [7][4][4][4][1][1][1]
-	 *                               [9][6][6][6][3][3][3][0][0][0]
-	 *                               [8][5][5][5][2][2][2] |  |  |
-	 *                               [7][4][4][4][1][1][1] |  |  |
-	 *                      [9][6][6][6][3][3][3][0][0][0] |  |  |
-	 *                      [8][5][5][5][2][2][2] |  |  |  |  |  |
-	 *                      [7][4][4][4][1][1][1] |  |  |  |  |  |
-	 *             [9][6][6][6][3][3][3][0][0][0] |  |  |  |  |  |
-	 *             [8][5][5][5][2][2][2] |  |  |  |  |  |  |  |  |
-	 *             [7][4][4][4][1][1][1] |  |  |  |  |  |  |  |  |
-	 *    [9][6][6][6][3][3][3][0][0][0] |  |  |  |  |  |  |  |  |
-	 *    [8][5][5][5][2][2][2] |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [7][4][4][4][1][1][1] |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [6][3][3][3][0][0][0] |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [5][2][2][2] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [4][1][1][1] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [3][0][0][0] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [2] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [1] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-	 *    [0] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-	 *     0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 0 
-	 */
 	
-	 /*            [9]     Each Section has four possible triangles,
-	 *              |      Representing a side of the base icosahedron
-	 *             [8]
-	 *              |      [9]-[6]-[6]-[6]                [6] VRef*2
-	 *             [7]      | / | / | / '                / |
-	 *              |      [8]-[5]-[5]  '             [5]-[5]
-	 * [9]-[6]-[6]-[6]      | / | /     '            / | / |
-	 *  | / | / | / |      [7]-[4]      '         [4]-[4]-[4]
-	 * [8]-[5]-[5]-[5]      | /         '        / | / | / |
-	 *  | / | / | / |      [6]          '     [6]-[3]-[3]-[3] VRef*1
-	 * [7]-[4]-[4]-[4]      '           '      '           '
-	 *  | / | / | / |       '           '      '           '
-	 * [6]-[3]-[3]-[3]     [6]-[3]-[3]-[3]     '          [3] VRef*2
-	 *  | / | / | / |       | / | / | / '      '         / |
-	 * [5]-[2]-[2]-[2]     [5]-[2]-[2]  '      '      [2]-[2]
-	 *  | / | / | / |       | / | /     '      '     / | / |
-	 * [4]-[1]-[1]-[1]     [4]-[1]      '      '  [1]-[1]-[1]
-	 *  | / | / | / |       | /         '      ' / | / | / |
-	 * [3]-[0]-[0]-[0]     [3]          '     [3]-[0]-[0]-[0] VRef*1
-	 *  |   '   '   '       '           '      '           '
-	 * [2]  '   '   '  URef 1           2      1           2
-	 *  |   '   '   '
-	 * [1]  '   '   '
-	 *  |   '   '   '
-	 * [0]  '   '   '
-	 *  0   1   2   0 <- ColumnNumber % Frequency
-	 */
-
 	 //find the reference vector indexes
-	int32 ref11, ref12, ref21, ref22;
-	DetermineReferenceIndexes(uIndex, vIndex,
-		ref11, ref12, ref21, ref22);
+	int32 uLocal = 0, vLocal = 0,
+		uRef1 = 0, uRef2 = 0,
+		vRef1 = 0, vRef2 = 0;
+	DetermineReferenceIndexes(uIndex, vIndex, uLocal, vLocal,
+		uRef1, uRef2, vRef1, vRef2);
 
-
-	//Determine if we're in an "upper" or "lower" triangle
-	int32 vCompare = vIndex - (vIndex / GridFrequency)*GridFrequency;
-	int32 uCompare = uIndex % GridFrequency;
-	bool upperTriangle = vCompare > uCompare //above the diagonal
-		|| vIndex == RectilinearGrid[uIndex].Num() - 1; // At the Top of the section
-
-	FVector icosahedronLocation;
-	if (upperTriangle)
-	{
-		icosahedronLocation = determineTriangleLocation(uIndex, vIndex,ref11,ref22, ref11, ref12);
-	}
-	else
-	{
-		icosahedronLocation = determineTriangleLocation(uIndex, vIndex, ref11, ref22, ref21, ref22);
-	}
+	FVector icosahedronLocation = determineTriangleLocation(uLocal, vLocal, uRef1, uRef2, vRef1, vRef2);
 
 	//normalize and project onto the sphere
-	FVector normalizedVector;
-	float baseVectorLength;
-	icosahedronLocation.ToDirectionAndLength(normalizedVector, baseVectorLength);
-	return GridRadius * normalizedVector;
+	float baseVectorLength = FVector::DotProduct(icosahedronLocation, icosahedronLocation);
+	baseVectorLength = FMath::Sqrt(baseVectorLength);
+	return icosahedronLocation * GridRadius/baseVectorLength;
 }
 
 int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) const
@@ -229,15 +154,15 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	referenceLocations.Reset(12);
 	referenceLocations.SetNumZeroed(12);
 
-	//Top Point
-	referenceLocations[10][0] = z;
-	referenceLocations[10][1] = 0;
-	referenceLocations[10][2] = x;
-		
 	//Bottom Point
-	referenceLocations[11][0] = -z;
+	referenceLocations[10][0] = -z;
+	referenceLocations[10][1] = 0;
+	referenceLocations[10][2] = -x;
+		
+	//Top Point
+	referenceLocations[11][0] = z;
 	referenceLocations[11][1] = 0;
-	referenceLocations[11][2] = -x;
+	referenceLocations[11][2] = x;
 
 	//Point 0
 	//+x,-z
@@ -358,57 +283,151 @@ void UGeodesicGrid::AssignNewIndexNumber(const int32& GridColumn, const int32& R
 	UVLocationList[currentIndexNumber].Add(RowNumber);
 }
 
-void UGeodesicGrid::DetermineReferenceIndexes(int32 uIndex, int32 vIndex, int32& ref11, int32& ref12, int32& ref21, int32& ref22) const
+void UGeodesicGrid::DetermineReferenceIndexes(int32 uIndex, int32 vIndex, int32& uLocal, int32& vLocal,
+	int32& uRef1, int32& uRef2, int32& vRef1, int32& vRef2) const
 {
+	//we need to make sure we're mapping to an actual triangle in on the grid
+	//Example f = 3
+	/*                                                          [9]
+	*                                                          [8]
+	*                                                          [7]
+	*                                                 [9][6][6][6]
+	*                                                 [8][5][5][5]
+	*                                                 [7][4][4][4]
+	*                                        [9][6][6][6][3][3][3]
+	*                                        [8][5][5][5][2][2][2]
+	*                                        [7][4][4][4][1][1][1]
+	*                               [9][6][6][6][3][3][3][0][0][0]
+	*                               [8][5][5][5][2][2][2] |  |  |
+	*                               [7][4][4][4][1][1][1] |  |  |
+	*                      [9][6][6][6][3][3][3][0][0][0] |  |  |
+	*                      [8][5][5][5][2][2][2] |  |  |  |  |  |
+	*                      [7][4][4][4][1][1][1] |  |  |  |  |  |
+	*             [9][6][6][6][3][3][3][0][0][0] |  |  |  |  |  |
+	*             [8][5][5][5][2][2][2] |  |  |  |  |  |  |  |  |
+	*             [7][4][4][4][1][1][1] |  |  |  |  |  |  |  |  |
+	*    [9][6][6][6][3][3][3][0][0][0] |  |  |  |  |  |  |  |  |
+	*    [8][5][5][5][2][2][2] |  |  |  |  |  |  |  |  |  |  |  |
+	*    [7][4][4][4][1][1][1] |  |  |  |  |  |  |  |  |  |  |  |
+	*    [6][3][3][3][0][0][0] |  |  |  |  |  |  |  |  |  |  |  |
+	*    [5][2][2][2] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+	*    [4][1][1][1] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+	*    [3][0][0][0] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+	*    [2] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+	*    [1] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+	*    [0] |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+	*     0  1  2  3  4  5  6  7  8  9  10 11 12 13 14 15 16 17 0
+	*/
+
+	/*            [9]     Each Section has four possible triangles,
+	*              |      Representing a side of the base icosahedron
+	*             [8]
+	*              |      [9]-[6]-[6]-[6]                [6] VRef*2
+	*             [7]      | / | / | / '                / |
+	*              |      [8]-[5]-[5]  '             [5]-[5]
+	* [9]-[6]-[6]-[6]      | / | /     '            / | / |
+	*  | / | / | / |      [7]-[4]      '         [4]-[4]-[4]
+	* [8]-[5]-[5]-[5]      | /         '        / | / | / |
+	*  | / | / | / |      [6]          '     [6]-[3]-[3]-[3] VRef*1
+	* [7]-[4]-[4]-[4]      '           '      '           '
+	*  | / | / | / |       '           '      '           '
+	* [6]-[3]-[3]-[3]     [6]-[3]-[3]-[3]     '          [3] VRef*2
+	*  | / | / | / |       | / | / | / '      '         / |
+	* [5]-[2]-[2]-[2]     [5]-[2]-[2]  '      '      [2]-[2]
+	*  | / | / | / |       | / | /     '      '     / | / |
+	* [4]-[1]-[1]-[1]     [4]-[1]      '      '  [1]-[1]-[1]
+	*  | / | / | / |       | /         '      ' / | / | / |
+	* [3]-[0]-[0]-[0]     [3]          '     [3]-[0]-[0]-[0] VRef*1
+	*  |   '   '   '       '           '      '           '
+	* [2]  '   '   '  URef 1           2      1           2
+	*  |   '   '   '
+	* [1]  '   '   '
+	*  |   '   '   '
+	* [0]  '   '   '
+	*  0   1   2   0 <- ColumnNumber % Frequency
+	*/
+
 	//Start with the Column Index
-	int32 uRef1 = (uIndex / GridFrequency)*GridFrequency; // The reference column number prior to/at this index
+	int32 uRefIndex1 = (uIndex / GridFrequency)*GridFrequency; // The reference column number prior to/at this index
 
 	 //if we're in the bottom indexes of a reference column, 
 	//we need to reference to prior reference column as column one
-	if (vIndex < GridFrequency && uRef1 == uIndex)
+	if (vIndex < GridFrequency && uRefIndex1 == uIndex)
 	{
-		uRef1 -= GridFrequency;
+		uRefIndex1 -= GridFrequency;
 	}
-	int32 uRef2 = uRef1 + GridFrequency; // The reference column number after this index
+	int32 uRefIndex2 = uRefIndex1 + GridFrequency; // The reference column number after this index
 
 										 // we might be wrapping around the grid
-	if (uRef2 == 5 * GridFrequency)
+	if (uRefIndex2 == 5 * GridFrequency)
 	{
-		uRef2 = 0; // Wrap Around
+		uRefIndex2 = 0; // Wrap Around
 	}
-	else if (uRef1 < 0)
+	else if (uRefIndex1 < 0)
 	{
-		uRef1 = 4 * GridFrequency;
+		uRefIndex1 = 4 * GridFrequency;
 	}
 
 	//Now Find the Row Indexes
-	int32 vRef21 = (vIndex / GridFrequency) * GridFrequency;
-	if (vRef21 == vIndex // We're at the "Top of a Triangle"
-		&& (vRef21 != 0 //If we're not in the very bottom row
-		&& (vRef21 != GridFrequency && uRef1 == uIndex))) //And especially not the bottom leftmost index in a section
+	int32 vRefIndex21 = (vIndex / GridFrequency) * GridFrequency;
+	if (vRefIndex21 == vIndex // We're at the "Top of a Triangle"
+		&& (vRefIndex21 != 0 //If we're not in the very bottom row
+		&& (vRefIndex21 != GridFrequency && uRefIndex1 == uIndex))) //And especially not the bottom leftmost index in a section
 	{
 		//Reference the Bottom of the Triangle
-		vRef21 -= GridFrequency;
+		vRefIndex21 -= GridFrequency;
 	}
 
 	//We're in the first column of a Triangle
-	if (uRef1 == uIndex)
+	if (uRefIndex1 == uIndex)
 	{
 		//So the Second column index is a grid frequency below where we're at
-		vRef21 -= GridFrequency;
+		vRefIndex21 -= GridFrequency;
 	}
 	//The first column reference is a grid frequency above we're we're at
-	int32 vRef11 = vRef21 + GridFrequency;
+	int32 vRefIndex11 = vRefIndex21 + GridFrequency;
 
 	//if we've done the above logic correctly such that vRef*1 is the lower corner,
 	//then these are simple
-	int32 vRef12 = vRef11 + GridFrequency;
-	int32 vRef22 = vRef21 + GridFrequency;
+	int32 vRefIndex12 = vRefIndex11 + GridFrequency;
+	int32 vRefIndex22 = vRefIndex21 + GridFrequency;
 
-	ref11 = RectilinearGrid[uRef1][vRef11];
-	ref12 = RectilinearGrid[uRef1][vRef12];
-	ref21 = RectilinearGrid[uRef2][vRef21];
-	ref22 = RectilinearGrid[uRef2][vRef22];
+	//Determine the Local U and V offsets from URefIndex1,VRefIndex11
+	uLocal = uIndex - uRefIndex1;
+	if (uIndex == uRefIndex2)
+	{
+		//we're in the last column
+		uLocal = GridFrequency;
+	}
+	vLocal = 0;
+	if (uLocal == 0)
+	{
+		vLocal = vIndex - vRefIndex11;
+	}
+	else
+	{
+		vLocal = vIndex - vRefIndex21;
+	}
+
+	//Retrieve the actual index numbers for the reference indexes
+	//Start with the diagonal direction
+	uRef1 = RectilinearGrid[uRefIndex1][vRefIndex11];
+	uRef2 = RectilinearGrid[uRefIndex2][vRefIndex22];
+
+	//Then find the "Vertical" Depending upon if we
+	//are in an upper or lower triangle
+	bool upperTriangle = vLocal > uLocal //above the diagonal
+		|| vIndex == RectilinearGrid[uIndex].Num() - 1; // At the Top of the section
+	if (upperTriangle)
+	{
+		vRef1 = uRef1;
+		vRef2 = RectilinearGrid[uRefIndex1][vRefIndex12];
+	}
+	else
+	{
+		vRef1 = RectilinearGrid[uRefIndex2][vRefIndex21];
+		vRef2 = uRef2;
+	}
 }
 
 TArray<int32> UGeodesicGrid::getLocationNeighbors(int32 uIndex, int32 vIndex) const
