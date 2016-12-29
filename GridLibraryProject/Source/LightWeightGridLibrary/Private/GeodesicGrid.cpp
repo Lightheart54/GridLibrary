@@ -34,11 +34,7 @@ FVector UGeodesicGrid::GetIndexLocation_Implementation(int32 gridIndex) const
 		uRef1, uRef2, vRef1, vRef2);
 
 	FVector icosahedronLocation = determineTriangleLocation(uLocal, vLocal, uRef1, uRef2, vRef1, vRef2);
-
-	//normalize and project onto the sphere
-	float baseVectorLength = FVector::DotProduct(icosahedronLocation, icosahedronLocation);
-	baseVectorLength = FMath::Sqrt(baseVectorLength);
-	return icosahedronLocation * GridRadius/baseVectorLength;
+	return projectVectorOntoSphere(icosahedronLocation);
 }
 
 int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) const
@@ -500,4 +496,12 @@ FVector UGeodesicGrid::determineTriangleLocation(int32 localU, int32 localV, int
 	return icosahedronLocation;
 }
 
+FVector UGeodesicGrid::projectVectorOntoSphere(const FVector& icosahedronLocation) const
+{
+	//Central Projection
+	float baseVectorLength = FVector::DotProduct(icosahedronLocation, icosahedronLocation);
+	baseVectorLength = FMath::Sqrt(baseVectorLength);
+	return icosahedronLocation * GridRadius / baseVectorLength;
+
+}
 

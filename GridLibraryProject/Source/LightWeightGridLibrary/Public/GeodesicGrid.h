@@ -90,7 +90,7 @@ protected:
 	/* The Radius of the Grid's Circumscribing Sphere*/
 	UPROPERTY(EditAnywhere, Category = "Grid Properties", meta = (ClampMin = 0.1, UIMin = 0.1))
 		float GridRadius;
-
+	
 	/* The number of Vertexes in the grid */
 	UPROPERTY(VisibleAnywhere, Category = "Grid Properties")
 		int32 NumberOfVertexes;
@@ -113,7 +113,7 @@ private:
 		int32& uRef1, int32& uRef2, int32& vRef1, int32& vRef2) const;
 	FVector determineTriangleLocation(int32 localU, int32 localV,
 		int32 Uref1, int32 Uref2, int32 Vref1, int32 Vref2) const;
-
+	FVector projectVectorOntoSphere(const FVector& icosahedronLocation) const;
 
 	TArray<int32> getLocationNeighbors(int32 uIndex, int32 vIndex) const;
 	void addIndexToNeighborList(int32 vIndex, int32 currentIndex,
@@ -121,4 +121,5 @@ private:
 
 	void decrementU(int32& uIndex, int32& vIndex) const;
 	void incrementU(int32& uIndex, int32& vIndex) const;
+	
 };
