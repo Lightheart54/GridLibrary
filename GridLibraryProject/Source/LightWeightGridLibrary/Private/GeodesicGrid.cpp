@@ -110,7 +110,7 @@ void UGeodesicGrid::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 void UGeodesicGrid::buildGrid()
 {
 	// update the number of Vertexes
-	NumberOfVertexes = 10 * GridFrequency * GridFrequency + 2;
+	NumberOfVertexes = 10 * (GridFrequency * GridFrequency) + 2;
 	buildIcosahedronRefernceLocations();
 	//Prep The UV Location List for population
 	UVLocationList.Empty(NumberOfVertexes);
@@ -131,7 +131,7 @@ void UGeodesicGrid::buildGrid()
 	populateRefernceColumn(3 * GridFrequency, currentIndexNumber);
 	populateRefernceColumn(4 * GridFrequency, currentIndexNumber);
 
-	for (int32 GridColumn = 0; GridColumn < 5; ++GridColumn)
+	for (int32 GridColumn = 1; GridColumn < 5* GridFrequency; ++GridColumn)
 	{
 		//We're in one of the reference columns we've already taken care of it
 		if (GridColumn % GridFrequency == 0) 
@@ -158,17 +158,41 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	referenceLocations[10][0] = -z;
 	referenceLocations[10][1] = 0;
 	referenceLocations[10][2] = -x;
-		
+
+	//Point0
+	//-y, -z
+	referenceLocations[0][0] = 0;
+	referenceLocations[0][1] = -x;
+	referenceLocations[0][2] = -z;
+
+	//Point8
+	//-x,-y
+	referenceLocations[2][0] = -x;
+	referenceLocations[2][1] = -z;
+	referenceLocations[2][2] = 0;
+
+	//Point6
+	//-x,+z
+	referenceLocations[4][0] = -z;
+	referenceLocations[4][1] = 0;
+	referenceLocations[4][2] = x;
+
+	//Point4
+	//-x,+y
+	referenceLocations[6][0] = -x;
+	referenceLocations[6][1] = z;
+	referenceLocations[6][2] = 0;
+
+	//Point2
+	//+y,-z
+	referenceLocations[8][0] = 0;
+	referenceLocations[8][1] = x;
+	referenceLocations[8][2] = -z;
+
 	//Top Point
 	referenceLocations[11][0] = z;
 	referenceLocations[11][1] = 0;
 	referenceLocations[11][2] = x;
-
-	//Point 0
-	//+x,-z
-	referenceLocations[0][0] = z;
-	referenceLocations[0][1] = 0;
-	referenceLocations[0][2] = -x;
 
 	//Point 1
 	//+x,-y
@@ -176,23 +200,11 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	referenceLocations[1][1] = -z;
 	referenceLocations[1][2] = 0;
 
-	//Point2
-	//+y,-z
-	referenceLocations[2][0] = 0;
-	referenceLocations[2][1] = x;
-	referenceLocations[2][2] = -z;
-
-	//Point3
-	//+x,+y
-	referenceLocations[3][0] = x;
-	referenceLocations[3][1] = z;
-	referenceLocations[3][2] = 0;
-
-	//Point4
-	//-x,+y
-	referenceLocations[4][0] = -x;
-	referenceLocations[4][1] = z;
-	referenceLocations[4][2] = 0;
+	//Point9
+	//-y,+z
+	referenceLocations[3][0] = 0;
+	referenceLocations[3][1] = -x;
+	referenceLocations[3][2] = z;
 
 	//Point5
 	//+y,+z
@@ -200,29 +212,17 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	referenceLocations[5][1] = x;
 	referenceLocations[5][2] = z;
 
-	//Point6
-	//-x,-y
-	referenceLocations[6][0] = -x;
-	referenceLocations[6][1] = -z;
-	referenceLocations[6][2] = 0;
+	//Point3
+	//+x,+y
+	referenceLocations[7][0] = x;
+	referenceLocations[7][1] = z;
+	referenceLocations[7][2] = 0;
 
-	//Point7
-	//-x,+z
-	referenceLocations[7][0] = -z;
-	referenceLocations[7][1] = 0;
-	referenceLocations[7][2] = x;
-	
-	//Point8
-	//-y, -z
-	referenceLocations[8][0] = 0;
-	referenceLocations[8][1] = -x;
-	referenceLocations[8][2] = -z;
-
-	//Point9
-	//-y,+z
-	referenceLocations[9][0] = 0;
-	referenceLocations[9][1] = -x;
-	referenceLocations[9][2] = z;
+	//Point 0
+	//+x,-z
+	referenceLocations[9][0] = z;
+	referenceLocations[9][1] = 0;
+	referenceLocations[9][2] = -x;
 }
 
 void UGeodesicGrid::populateRefernceColumn(const int32& GridColumn, int32& currentIndexNumber)
@@ -286,9 +286,10 @@ void UGeodesicGrid::AssignNewIndexNumber(const int32& GridColumn, const int32& R
 void UGeodesicGrid::DetermineReferenceIndexes(int32 uIndex, int32 vIndex, int32& uLocal, int32& vLocal,
 	int32& uRef1, int32& uRef2, int32& vRef1, int32& vRef2) const
 {
+	//10*(f^2) + 2
 	//we need to make sure we're mapping to an actual triangle in on the grid
 	//Example f = 3
-	/*                                                          [9]
+	/*                                                         [9]
 	*                                                          [8]
 	*                                                          [7]
 	*                                                 [9][6][6][6]
@@ -477,11 +478,11 @@ void UGeodesicGrid::decrementU(int32& uIndex, int32& vIndex) const
 
 void UGeodesicGrid::incrementU(int32& uIndex, int32& vIndex) const
 {
-	++uIndex;
-	if (uIndex%GridFrequency == 1)
+	if (uIndex%GridFrequency == 0)
 	{
 		vIndex -= GridFrequency;
 	}
+	++uIndex;
 	if (uIndex == GridFrequency * 5)
 	{
 		uIndex = 0;
