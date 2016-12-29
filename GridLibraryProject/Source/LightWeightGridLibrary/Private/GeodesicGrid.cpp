@@ -13,6 +13,7 @@ UGeodesicGrid::UGeodesicGrid() : Super()
 	PrimaryComponentTick.bCanEverTick = false;
 	GridFrequency = 1;
 	GridRadius = 100.0f;
+	icosahedronInteriorAngle = 0.0f;
 	buildGrid();
 }
 
@@ -39,7 +40,181 @@ FVector UGeodesicGrid::GetIndexLocation_Implementation(int32 gridIndex) const
 
 int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) const
 {
-	return 0;
+	//start by normalizing the position
+	FVector locationOnSphere = location / FMath::Sqrt(FVector::DotProduct(location, location));
+	//find the three closest reference points
+	TArray<int32> referenceIndexes; //Man I miss initializer lists
+	referenceIndexes.SetNumZeroed(12);
+	referenceIndexes[0] = 0;
+	referenceIndexes[1] = 1;
+	referenceIndexes[2] = 2;
+	referenceIndexes[3] = 3;
+	referenceIndexes[4] = 4;
+	referenceIndexes[5] = 5;
+	referenceIndexes[6] = 6;
+	referenceIndexes[7] = 7;
+	referenceIndexes[8] = 8;
+	referenceIndexes[9] = 9;
+	referenceIndexes[10] = 10; 
+	referenceIndexes[11] = 11;
+
+	referenceIndexes.Sort([&](const int32& pos1, const int32& pos2)->bool
+	{
+		return FVector::DotProduct(locationOnSphere, referenceLocations[pos1])
+					> FVector::DotProduct(locationOnSphere, referenceLocations[pos2]);
+	});
+
+	//if we're within a the icosahedron interior angle / (2* GridFrequency) of the closest point, we're at that point
+	if (FMath::Acos(FVector::DotProduct(locationOnSphere, referenceLocations[referenceIndexes[0]])) <= (icosahedronInteriorAngle/(2* GridFrequency)))
+	{
+		return referenceIndexes[0];
+	}
+
+	referenceIndexes.RemoveAt(3, 9);
+	referenceIndexes.Sort(); //sort so that 10 and 11 are at the end, if we have them we need to do special things
+
+	int32 Uref1 = 0, Uref2 = 0, Vref1 = 0, Vref2 = 0;
+	DetermineReferenceIndexesForLocationMapping(referenceIndexes, Uref1, Uref2, Vref1, Vref2);
+	
+	//Now we need to determine the localU and localV
+	FVector uReferenceVector = referenceLocations[Uref2] - referenceLocations[Uref1];
+	float uReferenceVectorLength = FMath::Sqrt(FVector::DotProduct(uReferenceVector, uReferenceVector));
+	FVector uReferenceVectorDirection = uReferenceVector / uReferenceVectorLength;
+	float uBasisLength = uReferenceVectorLength / GridFrequency;
+	FVector vReferenceVector = referenceLocations[Vref2] - referenceLocations[Vref1];
+	float vReferenceVectorLength = FMath::Sqrt(FVector::DotProduct(vReferenceVector, vReferenceVector));
+	FVector vReferenceVectorDirection = vReferenceVector / vReferenceVectorLength;
+	float vBasisLength = vReferenceVectorLength / GridFrequency;
+
+	FVector isosahedronVector = projectVectorOntoIcosahedronFace(locationOnSphere, referenceLocations[Uref1], uReferenceVectorDirection, vReferenceVectorDirection);
+	FVector localVectorOnFace = isosahedronVector - referenceLocations[Uref1];
+
+	//Project onto UDir
+	float uProjectionLength = FVector::DotProduct(localVectorOnFace, uReferenceVectorDirection);
+	int32 UValue = FMath::RoundToInt(uProjectionLength / uBasisLength);
+	if (UValue > GridFrequency)
+	{
+		UValue = GridFrequency;
+	}
+	//Resolve the rest in v, offsetting first to the u reference location we're going to use since u and v are orthogonal
+	FVector vRemnant = localVectorOnFace - UValue*uBasisLength*uReferenceVectorDirection;
+	float vProjectionLength = FVector::DotProduct(vRemnant, vReferenceVectorDirection);
+	int32 VIncrement = FMath::RoundToInt(vProjectionLength / vBasisLength);
+	int32 VValue = UValue + VIncrement;
+	if (VValue > GridFrequency)
+	{
+		VValue = GridFrequency;
+	}
+	else if (VValue < 0)
+	{
+		VValue = 0;
+	}
+
+	int32 UIndex = UVLocationList[Uref1][0];
+	int32 VIndex = UVLocationList[Uref1][1];
+	if (UValue > 0)
+	{
+		VIndex -= GridFrequency; //Column Offset
+		UIndex += UValue;
+		if (UValue == 5 * GridFrequency) //Wrap Around
+		{
+			UValue = 0;
+		}
+	}
+	VIndex += VValue;
+
+	return RectilinearGrid[UIndex][VIndex];
+}
+
+void UGeodesicGrid::DetermineReferenceIndexesForLocationMapping(const TArray<int32>& refenceIndexes,
+	int32 &Uref1, int32 &Uref2, int32 &Vref1, int32 &Vref2 ) const
+{
+	if (refenceIndexes[2] != 10 && refenceIndexes[2] != 11)
+	{
+		//We're in a cleanly defined triangle
+		//find the points that share a uIndex
+		//Because of the way the points are ordered in the beginning, the u grouped points will be adjacent in the list
+		if (UVLocationList[refenceIndexes[0]][0] == UVLocationList[refenceIndexes[1]][0])
+		{
+			Vref1 = refenceIndexes[0];
+			Vref2 = refenceIndexes[1];
+			if (refenceIndexes[2] != 9) //Handle Wrap Around
+			{
+				Uref1 = Vref1;
+				Uref2 = refenceIndexes[2];
+			}
+			else
+			{
+				Uref1 = refenceIndexes[2];
+				Uref2 = Vref2;
+			}
+		}
+		else if (UVLocationList[refenceIndexes[1]][0] == UVLocationList[refenceIndexes[2]][0])
+		{
+			Vref1 = refenceIndexes[1];
+			Vref2 = refenceIndexes[2];
+			if (refenceIndexes[0] != 0)  //Handle Wrap Around
+			{
+				Uref1 = refenceIndexes[0];
+				Uref2 = Vref2;
+			}
+			else
+			{
+				Uref1 = Vref1;
+				Uref2 = refenceIndexes[0];
+			}
+		}
+	}
+	else
+	{
+		if (refenceIndexes[2] == 10)
+		{
+			if (refenceIndexes[0] == 0 && refenceIndexes[1] == 8)  //Handle Wrap Around
+			{
+				Uref1 = 8;
+				Uref2 = 0;
+				Vref1 = 10;
+				Vref2 = 0;
+			}
+			else
+			{
+				Uref1 = refenceIndexes[0];
+				Uref2 = refenceIndexes[1];
+				Vref1 = 10;
+				Vref2 = refenceIndexes[1];
+			}
+		}
+		else //refenceIndexes[2] == 11
+		{
+			if (refenceIndexes[0] == 1 && refenceIndexes[1] == 9)  //Handle Wrap Around
+			{
+				Uref1 = 9;
+				Uref2 = 1;
+				Vref1 = 9;
+				Vref2 = 11;
+			}
+			else
+			{
+				Uref1 = refenceIndexes[0];
+				Uref2 = refenceIndexes[1];
+				Vref1 = refenceIndexes[0];
+				Vref2 = 11;
+			}
+		}
+	}
+}
+
+FVector UGeodesicGrid::projectVectorOntoIcosahedronFace(const FVector& positionOnSphere, const FVector& refPoint, const FVector& uDir, const FVector& vDir) const
+{
+	FVector planeVec = FVector::CrossProduct(uDir, vDir);
+	planeVec /= FVector::DotProduct(planeVec, planeVec);
+	float planeR = FVector::DotProduct(planeVec, refPoint);
+	if (planeR < 0)
+	{
+		planeVec *= -1;
+		planeR *= -1;
+	}
+	return planeR*positionOnSphere / FVector::DotProduct(planeVec, positionOnSphere);
 }
 
 TArray<int32> UGeodesicGrid::GetIndexNeighbors_Implementation(int32 gridIndex) const
@@ -144,8 +319,8 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	float z = (1 + FMath::Sqrt(5)) / 2.0;
 	float baseHedronRadius = FMath::Sqrt(x*x + z*z);
 	float pointMagnitudeRatio = 1.0 / baseHedronRadius;
-	x *= pointMagnitudeRatio * GridRadius;
-	z *= pointMagnitudeRatio * GridRadius;
+	x *= pointMagnitudeRatio;
+	z *= pointMagnitudeRatio;
 
 	referenceLocations.Reset(12);
 	referenceLocations.SetNumZeroed(12);
@@ -155,31 +330,31 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	referenceLocations[10][1] = 0;
 	referenceLocations[10][2] = -x;
 
-	//Point0
+	//Point 0
 	//-y, -z
 	referenceLocations[0][0] = 0;
 	referenceLocations[0][1] = -x;
 	referenceLocations[0][2] = -z;
 
-	//Point8
+	//Point 2
 	//-x,-y
 	referenceLocations[2][0] = -x;
 	referenceLocations[2][1] = -z;
 	referenceLocations[2][2] = 0;
 
-	//Point6
+	//Point 4
 	//-x,+z
 	referenceLocations[4][0] = -z;
 	referenceLocations[4][1] = 0;
 	referenceLocations[4][2] = x;
 
-	//Point4
+	//Point 6
 	//-x,+y
 	referenceLocations[6][0] = -x;
 	referenceLocations[6][1] = z;
 	referenceLocations[6][2] = 0;
 
-	//Point2
+	//Point 8
 	//+y,-z
 	referenceLocations[8][0] = 0;
 	referenceLocations[8][1] = x;
@@ -196,29 +371,31 @@ void UGeodesicGrid::buildIcosahedronRefernceLocations()
 	referenceLocations[1][1] = -z;
 	referenceLocations[1][2] = 0;
 
-	//Point9
+	//Point 3
 	//-y,+z
 	referenceLocations[3][0] = 0;
 	referenceLocations[3][1] = -x;
 	referenceLocations[3][2] = z;
 
-	//Point5
+	//Point 5
 	//+y,+z
 	referenceLocations[5][0] = 0;
 	referenceLocations[5][1] = x;
 	referenceLocations[5][2] = z;
 
-	//Point3
+	//Point 7
 	//+x,+y
 	referenceLocations[7][0] = x;
 	referenceLocations[7][1] = z;
 	referenceLocations[7][2] = 0;
 
-	//Point 0
+	//Point 9
 	//+x,-z
 	referenceLocations[9][0] = z;
 	referenceLocations[9][1] = 0;
 	referenceLocations[9][2] = -x;
+
+	icosahedronInteriorAngle = FMath::Acos(FVector::DotProduct(referenceLocations[0], referenceLocations[1]));
 }
 
 void UGeodesicGrid::populateRefernceColumn(const int32& GridColumn, int32& currentIndexNumber)
@@ -502,6 +679,5 @@ FVector UGeodesicGrid::projectVectorOntoSphere(const FVector& icosahedronLocatio
 	float baseVectorLength = FVector::DotProduct(icosahedronLocation, icosahedronLocation);
 	baseVectorLength = FMath::Sqrt(baseVectorLength);
 	return icosahedronLocation * GridRadius / baseVectorLength;
-
 }
 

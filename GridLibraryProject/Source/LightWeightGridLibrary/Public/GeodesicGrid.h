@@ -38,7 +38,7 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		int32 GetLocationIndex(const FVector& location) const;
 		int32 GetLocationIndex_Implementation(const FVector& location) const override;
-
+		
 	// See ILightWeightGridInterface::GetIndexNeighbors
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		TArray<int32> GetIndexNeighbors(int32 gridIndex) const;
@@ -96,6 +96,8 @@ protected:
 		int32 NumberOfVertexes;
 
 private:
+	float icosahedronInteriorAngle;
+
 	/* Constructs a Geodesic Grid With the Specified Frequency */
 	void buildGrid();
 	void buildIcosahedronRefernceLocations();
@@ -114,6 +116,11 @@ private:
 	FVector determineTriangleLocation(int32 localU, int32 localV,
 		int32 Uref1, int32 Uref2, int32 Vref1, int32 Vref2) const;
 	FVector projectVectorOntoSphere(const FVector& icosahedronLocation) const;
+	
+	void DetermineReferenceIndexesForLocationMapping(const TArray<int32>& refenceIndexes,
+		int32 &Uref1, int32 &Uref2, int32 &Vref1, int32 &Vref2) const;
+	FVector projectVectorOntoIcosahedronFace(const FVector& positionOnSphere,
+		const FVector& refPoint, const FVector& uDir, const FVector& vDir) const;
 
 	TArray<int32> getLocationNeighbors(int32 uIndex, int32 vIndex) const;
 	void addIndexToNeighborList(int32 vIndex, int32 currentIndex,
