@@ -14,6 +14,10 @@ UGeodesicGrid::UGeodesicGrid() : Super()
 	GridFrequency = 1;
 	GridRadius = 100.0f;
 	icosahedronInteriorAngle = 0.0f;
+#ifdef UE_BUILD_DEBUG
+	DebugDisplayDuration = 20.0f;
+#endif
+
 	buildGrid();
 }
 
@@ -41,7 +45,7 @@ FVector UGeodesicGrid::GetIndexLocation_Implementation(int32 gridIndex) const
 int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) const
 {
 	//start by normalizing the position
-	FVector locationOnSphere = location / FMath::Sqrt(FVector::DotProduct(location, location));
+	FVector locationOnUnitSphere = location / FMath::Sqrt(FVector::DotProduct(location, location));
 	//find the three closest reference points
 	TArray<int32> referenceIndexes; //Man I miss initializer lists
 	referenceIndexes.SetNumZeroed(12);
@@ -60,12 +64,12 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 
 	referenceIndexes.Sort([&](const int32& pos1, const int32& pos2)->bool
 	{
-		return FVector::DotProduct(locationOnSphere, referenceLocations[pos1])
-					> FVector::DotProduct(locationOnSphere, referenceLocations[pos2]);
+		return FVector::DotProduct(locationOnUnitSphere, referenceLocations[pos1])
+					> FVector::DotProduct(locationOnUnitSphere, referenceLocations[pos2]);
 	});
 
 	//if we're within a the icosahedron interior angle / (2* GridFrequency) of the closest point, we're at that point
-	if (FMath::Acos(FVector::DotProduct(locationOnSphere, referenceLocations[referenceIndexes[0]])) <= (icosahedronInteriorAngle/(2* GridFrequency)))
+	if (FMath::Acos(FVector::DotProduct(locationOnUnitSphere, referenceLocations[referenceIndexes[0]])) <= (icosahedronInteriorAngle/(2* GridFrequency)))
 	{
 		return referenceIndexes[0];
 	}
@@ -75,53 +79,75 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 
 	int32 Uref1 = 0, Uref2 = 0, Vref1 = 0, Vref2 = 0;
 	DetermineReferenceIndexesForLocationMapping(referenceIndexes, Uref1, Uref2, Vref1, Vref2);
+#ifdef UE_BUILD_DEBUG
+	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref1), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
+	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref2), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
+	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref1)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
+	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref2)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
+#endif
 	
 	//Now we need to determine the localU and localV
 	FVector uReferenceVector = referenceLocations[Uref2] - referenceLocations[Uref1];
 	float uReferenceVectorLength = FMath::Sqrt(FVector::DotProduct(uReferenceVector, uReferenceVector));
 	FVector uReferenceVectorDirection = uReferenceVector / uReferenceVectorLength;
 	float uBasisLength = uReferenceVectorLength / GridFrequency;
+	FVector uBasis = uReferenceVectorDirection*uBasisLength;
 	FVector vReferenceVector = referenceLocations[Vref2] - referenceLocations[Vref1];
 	float vReferenceVectorLength = FMath::Sqrt(FVector::DotProduct(vReferenceVector, vReferenceVector));
 	FVector vReferenceVectorDirection = vReferenceVector / vReferenceVectorLength;
 	float vBasisLength = vReferenceVectorLength / GridFrequency;
+	FVector vBasis = vReferenceVectorDirection*vBasisLength;
 
-	FVector isosahedronVector = projectVectorOntoIcosahedronFace(locationOnSphere, referenceLocations[Uref1], uReferenceVectorDirection, vReferenceVectorDirection);
-	FVector localVectorOnFace = isosahedronVector - referenceLocations[Uref1];
+	FVector icosahedronVector = projectVectorOntoIcosahedronFace(locationOnUnitSphere, referenceLocations[Uref1],
+		uReferenceVectorDirection, vReferenceVectorDirection);
+	FVector localVectorOnFace = icosahedronVector - referenceLocations[Uref1];
 
-	//Project onto UDir
-	float uProjectionLength = FVector::DotProduct(localVectorOnFace, uReferenceVectorDirection);
-	int32 UValue = FMath::RoundToInt(uProjectionLength / uBasisLength);
-	if (UValue > GridFrequency)
-	{
-		UValue = GridFrequency;
-	}
-	//Resolve the rest in v, offsetting first to the u reference location we're going to use since u and v are orthogonal
-	FVector vRemnant = localVectorOnFace - UValue*uBasisLength*uReferenceVectorDirection;
-	float vProjectionLength = FVector::DotProduct(vRemnant, vReferenceVectorDirection);
-	int32 VIncrement = FMath::RoundToInt(vProjectionLength / vBasisLength);
-	int32 VValue = UValue + VIncrement;
-	if (VValue > GridFrequency)
-	{
-		VValue = GridFrequency;
-	}
-	else if (VValue < 0)
-	{
-		VValue = 0;
-	}
+#ifdef UE_BUILD_DEBUG
+	DrawDebugPoint(GetWorld(), projectVectorOntoSphere(icosahedronVector), 20.0f, FColor::Red, false, DebugDisplayDuration);
+	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1), projectVectorOntoSphere(icosahedronVector), FColor::Emerald, false, DebugDisplayDuration, 0, 1.0f);
+	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
+		GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Uref2) - GetIndexLocation_Implementation(Uref1))/GridFrequency,
+		FColor::White, false, DebugDisplayDuration, 0, 1.0f);
+	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
+		GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency,
+		FColor::Yellow, false, DebugDisplayDuration, 0, 1.0f);
+#endif
+	/* need to map the localvectorOnFace into the non-orthononormal basis
+	 * h(U*U) + k(U*V) = W * U
+	 * h(U*V) + k(V*V) = W * V
+	 * with Cramer's rule we get
+	 * h = ((W * U)(V*V) - (U*V)(W*V))/((U*U)(V*V) - (U*V)^2)
+	 * v = ((W * V)(U*U) - (U*V)(W*U))/((U*U)(V*V) - (U*V)^2)
+	 */
+	float wDotU = FVector::DotProduct(localVectorOnFace, uBasis);
+	float wDotV = FVector::DotProduct(localVectorOnFace, vBasis);
+	float uDotV = FVector::DotProduct(uBasis, vBasis);
+	float uDotU = FVector::DotProduct(uBasis, uBasis);
+	float vDotV = FVector::DotProduct(vBasis, vBasis);
+	float h = (wDotU*vDotV - uDotV*wDotV) / (uDotU*vDotV - uDotV*uDotV);
+	float v = (wDotV*uDotU - uDotV*wDotU) / (uDotU*vDotV - uDotV*uDotV);
 
+#ifdef UE_BUILD_DEBUG
+	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
+		GetIndexLocation_Implementation(Uref1)
+		+ h*((GetIndexLocation_Implementation(Uref2) - GetIndexLocation_Implementation(Uref1)) / GridFrequency)
+		+ v*((GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency),
+		FColor::Magenta, false, DebugDisplayDuration, 0, 2.0f);
+#endif
+
+
+	int32 LocalUIndex = FMath::RoundToInt(h / uReferenceVectorLength);
+	int32 LocalVIndex = FMath::RoundToInt(v / vReferenceVectorLength);
+
+	//now find the actual u and v index
 	int32 UIndex = UVLocationList[Uref1][0];
 	int32 VIndex = UVLocationList[Uref1][1];
-	if (UValue > 0)
+	for (int32 i = 0 ; i < LocalUIndex; ++i)
 	{
-		VIndex -= GridFrequency; //Column Offset
-		UIndex += UValue;
-		if (UValue == 5 * GridFrequency) //Wrap Around
-		{
-			UValue = 0;
-		}
+		incrementU(UIndex, VIndex);
+		++VIndex;
 	}
-	VIndex += VValue;
+	VIndex += LocalVIndex;
 
 	return RectilinearGrid[UIndex][VIndex];
 }
@@ -207,14 +233,10 @@ void UGeodesicGrid::DetermineReferenceIndexesForLocationMapping(const TArray<int
 FVector UGeodesicGrid::projectVectorOntoIcosahedronFace(const FVector& positionOnSphere, const FVector& refPoint, const FVector& uDir, const FVector& vDir) const
 {
 	FVector planeVec = FVector::CrossProduct(uDir, vDir);
-	planeVec /= FVector::DotProduct(planeVec, planeVec);
-	float planeR = FVector::DotProduct(planeVec, refPoint);
-	if (planeR < 0)
-	{
-		planeVec *= -1;
-		planeR *= -1;
-	}
-	return planeR*positionOnSphere / FVector::DotProduct(planeVec, positionOnSphere);
+	planeVec /= FMath::Sqrt(FVector::DotProduct(planeVec, planeVec));
+	FVector offsetVector = positionOnSphere - refPoint;
+	float offsetNormalProjection = FVector::DotProduct(offsetVector, planeVec);
+	return positionOnSphere - offsetNormalProjection*planeVec;
 }
 
 TArray<int32> UGeodesicGrid::GetIndexNeighbors_Implementation(int32 gridIndex) const
@@ -241,16 +263,6 @@ void UGeodesicGrid::SetGridFrequency(int32 newFrequency)
 {
 	GridFrequency = newFrequency;
 	buildGrid();
-}
-
-void UGeodesicGrid::IncrementFrequency()
-{
-
-}
-
-void UGeodesicGrid::DecrementFrequency()
-{
-
 }
 
 float UGeodesicGrid::GetGridRadius() const

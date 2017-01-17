@@ -54,20 +54,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
 		void SetGridFrequency(int32 newFrequency);
 
-	/*
-	 * Subdivides the Grid.
-	 * Existing grid vertex numbers are invalidated.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
-	void IncrementFrequency();
-
-	/*
-	* Removes a subdivision from the Grid. This function does nothing if 
-	* the frequency is odd or 0. Existing grid vertex numbers are preserved.
-	*/
-	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
-	void DecrementFrequency();
-
 	/* Gets the Grid Radius*/
 	UFUNCTION(BlueprintCallable, Category = "Grid Properties")
 		float GetGridRadius() const;
@@ -94,6 +80,11 @@ protected:
 	/* The number of Vertexes in the grid */
 	UPROPERTY(VisibleAnywhere, Category = "Grid Properties")
 		int32 NumberOfVertexes;
+
+#ifdef UE_BUILD_DEBUG
+	UPROPERTY(EditAnywhere, Category = "Debug Properties", meta = (ClampMin = 0.1, UIMin = 0.1))
+		float DebugDisplayDuration;
+#endif
 
 private:
 	float icosahedronInteriorAngle;
