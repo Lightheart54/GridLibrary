@@ -16,6 +16,7 @@ UGeodesicGrid::UGeodesicGrid() : Super()
 	icosahedronInteriorAngle = 0.0f;
 #ifdef UE_BUILD_DEBUG
 	DebugDisplayDuration = 20.0f;
+	displayDebugLines = false;
 #endif
 
 	buildGrid();
@@ -80,10 +81,13 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 	int32 Uref1 = 0, Uref2 = 0, Vref1 = 0, Vref2 = 0;
 	DetermineReferenceIndexesForLocationMapping(referenceIndexes, Uref1, Uref2, Vref1, Vref2);
 #ifdef UE_BUILD_DEBUG
-	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref1), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
-	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref2), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
-	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref1)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
-	DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref2)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
+	if (displayDebugLines)
+	{
+		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref1), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
+		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref2), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
+		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref1)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
+		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref2)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
+	}
 #endif
 	
 	//Now we need to determine the localU and localV
@@ -103,14 +107,17 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 	FVector localVectorOnFace = icosahedronVector - referenceLocations[Uref1];
 
 #ifdef UE_BUILD_DEBUG
-	DrawDebugPoint(GetWorld(), projectVectorOntoSphere(icosahedronVector), 20.0f, FColor::Red, false, DebugDisplayDuration);
-	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1), projectVectorOntoSphere(icosahedronVector), FColor::Emerald, false, DebugDisplayDuration, 0, 1.0f);
-	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
-		GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Uref2) - GetIndexLocation_Implementation(Uref1))/GridFrequency,
-		FColor::White, false, DebugDisplayDuration, 0, 1.0f);
-	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
-		GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency,
-		FColor::Yellow, false, DebugDisplayDuration, 0, 1.0f);
+	if (displayDebugLines)
+	{
+		DrawDebugPoint(GetWorld(), projectVectorOntoSphere(icosahedronVector), 20.0f, FColor::Red, false, DebugDisplayDuration);
+		DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1), projectVectorOntoSphere(icosahedronVector), FColor::Emerald, false, DebugDisplayDuration, 0, 1.0f);
+		DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
+			GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Uref2) - GetIndexLocation_Implementation(Uref1)) / GridFrequency,
+			FColor::White, false, DebugDisplayDuration, 0, 1.0f);
+		DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
+			GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency,
+			FColor::Yellow, false, DebugDisplayDuration, 0, 1.0f);
+	}
 #endif
 	/* need to map the localvectorOnFace into the non-orthononormal basis
 	 * h(U*U) + k(U*V) = W * U
@@ -128,11 +135,14 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 	float v = (wDotV*uDotU - uDotV*wDotU) / (uDotU*vDotV - uDotV*uDotV);
 
 #ifdef UE_BUILD_DEBUG
-	DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
-		GetIndexLocation_Implementation(Uref1)
-		+ h*((GetIndexLocation_Implementation(Uref2) - GetIndexLocation_Implementation(Uref1)) / GridFrequency)
-		+ v*((GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency),
-		FColor::Magenta, false, DebugDisplayDuration, 0, 2.0f);
+	if (displayDebugLines)
+	{
+		DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
+				GetIndexLocation_Implementation(Uref1)
+				+ h*((GetIndexLocation_Implementation(Uref2) - GetIndexLocation_Implementation(Uref1)) / GridFrequency)
+				+ v*((GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency),
+				FColor::Magenta, false, DebugDisplayDuration, 0, 2.0f);
+	}
 #endif
 
 

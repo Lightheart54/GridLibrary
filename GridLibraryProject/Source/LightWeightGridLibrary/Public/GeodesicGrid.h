@@ -21,7 +21,7 @@ class LIGHTWEIGHTGRIDLIBRARY_API UGeodesicGrid : public USceneComponent, public 
 public:	
 	// Sets default values for this component's properties
 	UGeodesicGrid();
-		
+			
 	// See ILightWeightGridInterface::GetNumbeOfElements
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Grid Properties")
 		int32 GetNumberOfElements() const;
@@ -82,6 +82,8 @@ protected:
 		int32 NumberOfVertexes;
 
 #ifdef UE_BUILD_DEBUG
+	UPROPERTY(EditAnywhere, Category = "Debug Properties")
+		bool displayDebugLines;
 	UPROPERTY(EditAnywhere, Category = "Debug Properties", meta = (ClampMin = 0.1, UIMin = 0.1))
 		float DebugDisplayDuration;
 #endif
