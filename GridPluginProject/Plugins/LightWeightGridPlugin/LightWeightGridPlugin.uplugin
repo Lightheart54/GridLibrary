@@ -1,0 +1,21 @@
+{
+	"FileVersion" : 3,
+	"Version" : 1,
+	"VersionName" : "1.0",
+	"FriendlyName" : "Light Weight Grid Plugin",
+	"Description" : "The Light Weight Grid Plugin provides an interface for interacting agnostically with different grid types. In addition to this it contains an implementation of that interface with a Geodesic Grid for a sphere",
+	"Category" : "Gridding Tools",
+	"CreatedBy" : "Cullen Sarles",
+	"EnabledByDefault" : true,
+	"CanContainContent" : false,
+	"IsBetaVersion" : false,
+	"Installed" : false,
+	"Modules" :
+	[
+		{
+			"Name" : "LightWeightGridPlugin",
+			"Type" : "Developer",
+			"LoadingPhase" : "Default"
+		}
+	]
+}
