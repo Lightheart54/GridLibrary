@@ -1,4 +1,4 @@
-// Copyright 1998-2016 Epic Games, Inc. All Rights Reserved.
+// Copyright 2017 Cullen Sarles, Inc. All Rights Reserved.
 
 namespace UnrealBuildTool.Rules
 {

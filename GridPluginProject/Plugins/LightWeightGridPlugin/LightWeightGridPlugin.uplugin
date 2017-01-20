@@ -15,7 +15,7 @@
 		{
 			"Name" : "LightWeightGridPlugin",
 			"Type" : "Developer",
-			"LoadingPhase" : "Default"
+			"LoadingPhase" : "PreDefault"
 		}
 	]
 }
