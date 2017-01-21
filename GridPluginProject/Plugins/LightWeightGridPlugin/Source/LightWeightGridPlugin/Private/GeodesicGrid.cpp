@@ -14,10 +14,8 @@ UGeodesicGrid::UGeodesicGrid() : Super()
 	GridFrequency = 1;
 	GridRadius = 100.0f;
 	icosahedronInteriorAngle = 0.0f;
-#ifdef UE_BUILD_DEBUG
 	DebugDisplayDuration = 20.0f;
 	displayDebugLines = false;
-#endif
 
 	buildGrid();
 }
@@ -80,7 +78,7 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 
 	int32 Uref1 = 0, Uref2 = 0, Vref1 = 0, Vref2 = 0;
 	DetermineReferenceIndexesForLocationMapping(referenceIndexes, Uref1, Uref2, Vref1, Vref2);
-#ifdef UE_BUILD_DEBUG
+
 	if (displayDebugLines)
 	{
 		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref1), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
@@ -88,7 +86,6 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref1)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
 		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref2)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
 	}
-#endif
 	
 	//Now we need to determine the localU and localV
 	FVector uReferenceVector = referenceLocations[Uref2] - referenceLocations[Uref1];
@@ -105,8 +102,7 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 	FVector icosahedronVector = projectVectorOntoIcosahedronFace(locationOnUnitSphere, referenceLocations[Uref1],
 		uReferenceVectorDirection, vReferenceVectorDirection);
 	FVector localVectorOnFace = icosahedronVector - referenceLocations[Uref1];
-
-#ifdef UE_BUILD_DEBUG
+	
 	if (displayDebugLines)
 	{
 		DrawDebugPoint(GetWorld(), projectVectorOntoSphere(icosahedronVector), 20.0f, FColor::Red, false, DebugDisplayDuration);
@@ -118,7 +114,7 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 			GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency,
 			FColor::Yellow, false, DebugDisplayDuration, 0, 1.0f);
 	}
-#endif
+
 	/* need to map the localvectorOnFace into the non-orthononormal basis
 	 * h(U*U) + k(U*V) = W * U
 	 * h(U*V) + k(V*V) = W * V
@@ -134,7 +130,6 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 	float h = (wDotU*vDotV - uDotV*wDotV) / (uDotU*vDotV - uDotV*uDotV);
 	float v = (wDotV*uDotU - uDotV*wDotU) / (uDotU*vDotV - uDotV*uDotV);
 
-#ifdef UE_BUILD_DEBUG
 	if (displayDebugLines)
 	{
 		DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
@@ -143,7 +138,6 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 				+ v*((GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency),
 				FColor::Magenta, false, DebugDisplayDuration, 0, 2.0f);
 	}
-#endif
 
 
 	int32 LocalUIndex = FMath::RoundToInt(h / uReferenceVectorLength);

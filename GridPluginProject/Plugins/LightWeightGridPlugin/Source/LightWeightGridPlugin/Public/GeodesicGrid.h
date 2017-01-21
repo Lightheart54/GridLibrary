@@ -81,12 +81,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Grid Properties")
 		int32 NumberOfVertexes;
 
-#ifdef UE_BUILD_DEBUG
 	UPROPERTY(EditAnywhere, Category = "Debug Properties")
 		bool displayDebugLines;
 	UPROPERTY(EditAnywhere, Category = "Debug Properties", meta = (ClampMin = 0.1, UIMin = 0.1))
 		float DebugDisplayDuration;
-#endif
 
 private:
 	float icosahedronInteriorAngle;

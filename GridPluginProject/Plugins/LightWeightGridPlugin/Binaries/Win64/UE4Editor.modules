@@ -1,0 +1,8 @@
+{
+	"Changelist" : 3172292,
+	"BuildId" : "1db6444a-5185-4f7d-88fa-4674f6ec3db2",
+	"Modules" : 
+	{
+		"LightWeightGridPlugin" : "UE4Editor-LightWeightGridPlugin.dll"
+	}
+}
