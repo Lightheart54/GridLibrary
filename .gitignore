@@ -46,6 +46,7 @@ SourceArt/**/*.tga
 
 # Binary Files
 */Binaries/*
+*/Plugins/LightWeightGridPlugin/Binaries/*
 
 # Builds
 */Build/*
@@ -58,6 +59,7 @@ SourceArt/**/*.tga
 
 # Compiled source files for the engine to use
 */Intermediate/*
+*/Plugins/LightWeightGridPlugin/Intermediate/*
 
 # Cache files for the editor to use
 */DerivedDataCache/*
