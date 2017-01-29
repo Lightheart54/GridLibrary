@@ -250,11 +250,65 @@ TArray<int32> UGeodesicGrid::GetIndexNeighbors_Implementation(int32 gridIndex) c
 	{
 		TArray<int32> locationNeighbors = getLocationNeighbors(UVLocationList[gridIndex][UVIndex],
 			UVLocationList[gridIndex][UVIndex + 1]);
-		for (int32 neighborIndex : locationNeighbors)
+		//this is the only place this index exists, so we're done here
+		if (UVLocationList[gridIndex].Num() == 2)
 		{
-			neighborList.AddUnique(neighborIndex);
+			neighborList = locationNeighbors;
+			break;;
+		}
+
+		//otherwise need to transfer the neighbors over in a way to perserve their order
+		int32 transferStartLoc = 0;
+		int32 targetTransferIndex = 0;
+		int32 numCornersToTransfer = 5;
+		if (neighborList.Num()==0)
+		{
+			neighborList.SetNumUninitialized(6);
+			for (int32 i = 0; i < 6; ++i)
+			{
+				neighborList[i] = -1;
+			}
+			numCornersToTransfer = 6;
+		}
+		else
+		{
+			transferStartLoc = -1;
+			for (; targetTransferIndex < locationNeighbors.Num(); ++targetTransferIndex)
+			{
+				int32 tileIndex = locationNeighbors[targetTransferIndex];
+				if (tileIndex != -1)
+				{
+					transferStartLoc = neighborList.Find(tileIndex);
+					if (transferStartLoc >= 0)
+					{
+						break;
+					}
+				}
+			}
+			++transferStartLoc;
+			++targetTransferIndex;
+		}
+		for (int numCorners = 0; numCorners < numCornersToTransfer; ++numCorners, ++transferStartLoc, ++targetTransferIndex)
+		{
+			if (targetTransferIndex == 6)
+			{
+				targetTransferIndex = 0;
+			}
+			if (transferStartLoc == 6)
+			{
+				transferStartLoc = 0;
+			}
+			if (locationNeighbors[targetTransferIndex] != -1)
+			{
+				if (neighborList.Contains(locationNeighbors[targetTransferIndex]))
+				{
+					continue;
+				}
+				neighborList[transferStartLoc] = locationNeighbors[targetTransferIndex];
+			}
 		}
 	}
+	neighborList.Remove(-1);
 	return neighborList;
 }
 
@@ -645,11 +699,13 @@ void UGeodesicGrid::addIndexToNeighborList(int32 vIndex, int32 currentIndex, int
 {
 	if (vIndex >= 0 && vIndex < RectilinearGrid[uIndex].Num())
 	{
-		if (currentIndex != RectilinearGrid[uIndex][vIndex])
+		if (currentIndex != RectilinearGrid[uIndex][vIndex] && !neighborList.Contains(RectilinearGrid[uIndex][vIndex]))
 		{
 			neighborList.Add(RectilinearGrid[uIndex][vIndex]);
+			return;
 		}
 	}
+	neighborList.Add(-1);
 }
 
 void UGeodesicGrid::decrementU(int32& uIndex, int32& vIndex) const
