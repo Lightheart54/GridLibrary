@@ -1,6 +1,6 @@
 // Copyright 2016 Cullen Sarles, All rights resevered
 
-#include "LightWeightGridLibrary.h"
+#include "LightWeightGridPluginPCH.h"
 #include "GeodesicGrid.h"
 
 
@@ -14,10 +14,8 @@ UGeodesicGrid::UGeodesicGrid() : Super()
 	GridFrequency = 1;
 	GridRadius = 100.0f;
 	icosahedronInteriorAngle = 0.0f;
-#ifdef UE_BUILD_DEBUG
 	DebugDisplayDuration = 20.0f;
 	displayDebugLines = false;
-#endif
 
 	buildGrid();
 }
@@ -80,7 +78,7 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 
 	int32 Uref1 = 0, Uref2 = 0, Vref1 = 0, Vref2 = 0;
 	DetermineReferenceIndexesForLocationMapping(referenceIndexes, Uref1, Uref2, Vref1, Vref2);
-#ifdef UE_BUILD_DEBUG
+
 	if (displayDebugLines)
 	{
 		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Uref1), 20.0f, FColor::Cyan, false, DebugDisplayDuration);
@@ -88,7 +86,6 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref1)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
 		DrawDebugPoint(GetWorld(), GetIndexLocation_Implementation(Vref2)*1.05, 20.0f, FColor::Blue, false, DebugDisplayDuration);
 	}
-#endif
 	
 	//Now we need to determine the localU and localV
 	FVector uReferenceVector = referenceLocations[Uref2] - referenceLocations[Uref1];
@@ -105,8 +102,7 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 	FVector icosahedronVector = projectVectorOntoIcosahedronFace(locationOnUnitSphere, referenceLocations[Uref1],
 		uReferenceVectorDirection, vReferenceVectorDirection);
 	FVector localVectorOnFace = icosahedronVector - referenceLocations[Uref1];
-
-#ifdef UE_BUILD_DEBUG
+	
 	if (displayDebugLines)
 	{
 		DrawDebugPoint(GetWorld(), projectVectorOntoSphere(icosahedronVector), 20.0f, FColor::Red, false, DebugDisplayDuration);
@@ -118,7 +114,7 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 			GetIndexLocation_Implementation(Uref1) + (GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency,
 			FColor::Yellow, false, DebugDisplayDuration, 0, 1.0f);
 	}
-#endif
+
 	/* need to map the localvectorOnFace into the non-orthononormal basis
 	 * h(U*U) + k(U*V) = W * U
 	 * h(U*V) + k(V*V) = W * V
@@ -134,7 +130,6 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 	float h = (wDotU*vDotV - uDotV*wDotV) / (uDotU*vDotV - uDotV*uDotV);
 	float v = (wDotV*uDotU - uDotV*wDotU) / (uDotU*vDotV - uDotV*uDotV);
 
-#ifdef UE_BUILD_DEBUG
 	if (displayDebugLines)
 	{
 		DrawDebugLine(GetWorld(), GetIndexLocation_Implementation(Uref1),
@@ -143,7 +138,6 @@ int32 UGeodesicGrid::GetLocationIndex_Implementation(const FVector& location) co
 				+ v*((GetIndexLocation_Implementation(Vref2) - GetIndexLocation_Implementation(Vref1)) / GridFrequency),
 				FColor::Magenta, false, DebugDisplayDuration, 0, 2.0f);
 	}
-#endif
 
 
 	int32 LocalUIndex = FMath::RoundToInt(h / uReferenceVectorLength);
@@ -256,11 +250,65 @@ TArray<int32> UGeodesicGrid::GetIndexNeighbors_Implementation(int32 gridIndex) c
 	{
 		TArray<int32> locationNeighbors = getLocationNeighbors(UVLocationList[gridIndex][UVIndex],
 			UVLocationList[gridIndex][UVIndex + 1]);
-		for (int32 neighborIndex : locationNeighbors)
+		//this is the only place this index exists, so we're done here
+		if (UVLocationList[gridIndex].Num() == 2)
 		{
-			neighborList.AddUnique(neighborIndex);
+			neighborList = locationNeighbors;
+			break;;
+		}
+
+		//otherwise need to transfer the neighbors over in a way to perserve their order
+		int32 transferStartLoc = 0;
+		int32 targetTransferIndex = 0;
+		int32 numCornersToTransfer = 5;
+		if (neighborList.Num()==0)
+		{
+			neighborList.SetNumUninitialized(6);
+			for (int32 i = 0; i < 6; ++i)
+			{
+				neighborList[i] = -1;
+			}
+			numCornersToTransfer = 6;
+		}
+		else
+		{
+			transferStartLoc = -1;
+			for (; targetTransferIndex < locationNeighbors.Num(); ++targetTransferIndex)
+			{
+				int32 tileIndex = locationNeighbors[targetTransferIndex];
+				if (tileIndex != -1)
+				{
+					transferStartLoc = neighborList.Find(tileIndex);
+					if (transferStartLoc >= 0)
+					{
+						break;
+					}
+				}
+			}
+			++transferStartLoc;
+			++targetTransferIndex;
+		}
+		for (int numCorners = 0; numCorners < numCornersToTransfer; ++numCorners, ++transferStartLoc, ++targetTransferIndex)
+		{
+			if (targetTransferIndex == 6)
+			{
+				targetTransferIndex = 0;
+			}
+			if (transferStartLoc == 6)
+			{
+				transferStartLoc = 0;
+			}
+			if (locationNeighbors[targetTransferIndex] != -1)
+			{
+				if (neighborList.Contains(locationNeighbors[targetTransferIndex]))
+				{
+					continue;
+				}
+				neighborList[transferStartLoc] = locationNeighbors[targetTransferIndex];
+			}
 		}
 	}
+	neighborList.Remove(-1);
 	return neighborList;
 }
 
@@ -651,11 +699,13 @@ void UGeodesicGrid::addIndexToNeighborList(int32 vIndex, int32 currentIndex, int
 {
 	if (vIndex >= 0 && vIndex < RectilinearGrid[uIndex].Num())
 	{
-		if (currentIndex != RectilinearGrid[uIndex][vIndex])
+		if (currentIndex != RectilinearGrid[uIndex][vIndex] && !neighborList.Contains(RectilinearGrid[uIndex][vIndex]))
 		{
 			neighborList.Add(RectilinearGrid[uIndex][vIndex]);
+			return;
 		}
 	}
+	neighborList.Add(-1);
 }
 
 void UGeodesicGrid::decrementU(int32& uIndex, int32& vIndex) const
